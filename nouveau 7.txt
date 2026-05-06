@@ -1,0 +1,8 @@
+github, read the docs, rapport, slides, video
+
+dans le projets cv x nlp je suis a la phase 3(cv), j'ai deja fais les modèles de base, il reste maintenant a fine tuner le modele sur les objets qui ne sont pas bien detecter.
+Pour le moment les modules sont fait pour traiter des images fixes, on doit juste appliquer des petites modifications pour le faire en temps reel 
+
+Proposition, essayer de faire un scanne de la maison qu'on va mettre dans un ficher json, et enssuite utiliser du deep pour fire le travail.
+on peux utiliser le truc de detection de passage de pieton où encore ce qui est sure trouver un moyen d'ameliorer ça, parce que guider une personne vers une chaise c'est pas 
+pareil que de le guider vers un couteau ou vers un vers 
