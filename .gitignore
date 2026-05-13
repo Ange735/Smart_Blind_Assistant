@@ -1,0 +1,5 @@
+fire/
+knife/
+stair/
+backend/.venv/
+backend/nlp/.model_cache/
