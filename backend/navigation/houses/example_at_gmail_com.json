@@ -1,0 +1,25 @@
+{
+    "rooms": [
+        "salon",
+        "chambre",
+        "cuisine",
+        "douche"
+    ],
+    "connections": [
+        {
+            "from": "salon",
+            "to": "cuisine",
+            "direction": "droite"
+        },
+        {
+            "from": "salon",
+            "to": "chambre",
+            "direction": "avancez"
+        },
+        {
+            "from": "chambre",
+            "to": "douche",
+            "direction": "avancez"
+        }
+    ]
+}

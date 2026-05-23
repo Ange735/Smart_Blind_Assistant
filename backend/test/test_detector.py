@@ -7,7 +7,7 @@ import cv2
 from cv.detector import ObstacleDetector
 
 detector  = ObstacleDetector()
-image_path = os.path.join(os.path.dirname(__file__), '..', 'image_test', '5.png')
+image_path = os.path.join(os.path.dirname(__file__), '..', 'image_test', '2.png')
 
 results = detector.detect(image_path)
 image   = cv2.imread(image_path)

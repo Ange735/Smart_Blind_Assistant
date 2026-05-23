@@ -122,13 +122,15 @@ def find_object(image_path: str, target: str) -> dict:
                 depth_map, x1, y1, x2, y2
             )
 
+            # ── Conversion types NumPy → Python natif ─────────────────────
             best = {
                 "objet":       cls_name,
-                "confiance":   round(conf, 2),
+                "confiance":   float(round(conf, 2)),
                 "position":    position,
                 "distance":    distance_label,
-                "depth_score": depth_score,
-                "x1": x1, "y1": y1, "x2": x2, "y2": y2
+                "depth_score": float(depth_score),
+                "x1": int(x1), "y1": int(y1),
+                "x2": int(x2), "y2": int(y2)
             }
 
     # ── Résultat ──────────────────────────────────────────────────────────

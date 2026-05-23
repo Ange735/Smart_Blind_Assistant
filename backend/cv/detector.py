@@ -32,7 +32,7 @@ def estimer_distance(depth_map, x1, y1, x2, y2):
     else:
         label = "loin"
 
-    return label, round(valeur_norm, 3)
+    return label, round(float(valeur_norm), 3)
 
 
 # ================================
@@ -109,14 +109,14 @@ OBJET_FR = {
 # Classes dangereuses → alerte peu importe la distance
 CLASSES_DANGER = {"fire", "hunman-fire", "knife", "stairs"}
 
-# Priorités des alertes (plus le chiffre est grand, plus c'est urgent)
+# Priorités des alertes
 PRIORITE = {
-    "hunman-fire": 5,  # personne en feu → urgence maximale
-    "fire":        4,  # feu
-    "knife":       3,  # couteau
-    "stairs":      2,  # escaliers
-    "tres proche": 2,  # obstacle très proche
-    "proche":      1,  # obstacle proche
+    "hunman-fire": 5,
+    "fire":        4,
+    "knife":       3,
+    "stairs":      2,
+    "tres proche": 2,
+    "proche":      1,
 }
 
 def _generer_alerte(objet_fr, position, distance, cls_name=""):
@@ -227,14 +227,16 @@ class ObstacleDetector:
                     objet_fr = OBJET_FR.get(cls_name, cls_name)
                     alerte   = _generer_alerte(objet_fr, position, distance_label, cls_name)
 
+                    # ── Conversion types NumPy → Python natif ─────────────
                     obstacles.append({
                         "objet":       cls_name,
                         "objet_fr":    objet_fr,
-                        "confiance":   round(conf, 2),
+                        "confiance":   float(round(conf, 2)),
                         "position":    position,
                         "distance":    distance_label,
-                        "depth_score": depth_valeur,
-                        "x1": x1, "y1": y1, "x2": x2, "y2": y2,
+                        "depth_score": float(depth_valeur),
+                        "x1": int(x1), "y1": int(y1),
+                        "x2": int(x2), "y2": int(y2),
                         "alerte":      alerte,
                     })
 
@@ -245,13 +247,11 @@ class ObstacleDetector:
         alertes = []
         for obs in obstacles:
             if obs["alerte"]:
-                # Calcul priorité
                 if obs["objet"] in PRIORITE:
                     priorite = PRIORITE[obs["objet"]]
                 else:
                     priorite = PRIORITE.get(obs["distance"], 0)
 
-                # Boost priorité si très proche
                 if obs["distance"] == "tres proche":
                     priorite += 1
 

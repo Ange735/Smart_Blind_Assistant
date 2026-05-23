@@ -1,0 +1,51 @@
+{
+    "rooms": [
+        "salon",
+        "couloir",
+        "cuisine",
+        "chambre",
+        "salle_de_bain"
+    ],
+    "connections": [
+        {
+            "from": "salon",
+            "to": "couloir",
+            "angle": 90
+        },
+        {
+            "from": "couloir",
+            "to": "cuisine",
+            "angle": 0
+        },
+        {
+            "from": "couloir",
+            "to": "chambre",
+            "angle": 90
+        },
+        {
+            "from": "couloir",
+            "to": "salle_de_bain",
+            "angle": 270
+        },
+        {
+            "from": "couloir",
+            "to": "salon",
+            "angle": 270
+        },
+        {
+            "from": "cuisine",
+            "to": "couloir",
+            "angle": 180
+        },
+        {
+            "from": "chambre",
+            "to": "couloir",
+            "angle": 270
+        },
+        {
+            "from": "salle_de_bain",
+            "to": "couloir",
+            "angle": 90
+        }
+    ]
+}
