@@ -22,7 +22,6 @@ for intent, examples in intents.items():
 
 # ================================
 # CLASSES YOLO COCO
-# Liste fixe des 80 classes détectables — encodée une seule fois
 # ================================
 
 YOLO_CLASSES = [
@@ -50,8 +49,108 @@ print("[NLP] Classes YOLO encodées ✅")
 
 
 # ================================
+# MAPPING EXPLICITE FR → YOLO
+# Priorité absolue sur la similarité vectorielle
+# ================================
+
+FR_TO_YOLO: dict[str, str] = {
+    # Mobilier
+    "lit":              "bed",
+    "canapé":           "couch",
+    "sofa":             "couch",
+    "chaise":           "chair",
+    "fauteuil":         "chair",
+    "table":            "dining table",
+    "table à manger":   "dining table",
+    "bureau":           "laptop",
+    "commode":          "bed",
+    "armoire":          "bed",
+    # Électronique
+    "télé":             "tv",
+    "télévision":       "tv",
+    "écran":            "tv",
+    "téléphone":        "cell phone",
+    "portable":         "cell phone",
+    "smartphone":       "cell phone",
+    "ordi":             "laptop",
+    "ordinateur":       "laptop",
+    "pc":               "laptop",
+    "clavier":          "keyboard",
+    "souris":           "mouse",
+    "télécommande":     "remote",
+    # Cuisine
+    "frigo":            "refrigerator",
+    "réfrigérateur":    "refrigerator",
+    "four":             "oven",
+    "micro-onde":       "microwave",
+    "micro onde":       "microwave",
+    "grille-pain":      "toaster",
+    "grille pain":      "toaster",
+    "évier":            "sink",
+    "robinet":          "sink",
+    # Salle de bain
+    "brosse à dents":   "toothbrush",
+    "brosse dents":     "toothbrush",
+    "sèche-cheveux":    "hair drier",
+    "sèche cheveux":    "hair drier",
+    # Animaux
+    "chien":            "dog",
+    "chat":             "cat",
+    "cheval":           "horse",
+    "vache":            "cow",
+    "mouton":           "sheep",
+    "oiseau":           "bird",
+    "ours":             "bear",
+    "éléphant":         "elephant",
+    "girafe":           "giraffe",
+    "zèbre":            "zebra",
+    # Nourriture
+    "bouteille":        "bottle",
+    "verre":            "wine glass",
+    "tasse":            "cup",
+    "fourchette":       "fork",
+    "couteau":          "knife",
+    "cuillère":         "spoon",
+    "bol":              "bowl",
+    "banane":           "banana",
+    "pomme":            "apple",
+    "sandwich":         "sandwich",
+    "orange":           "orange",
+    "pizza":            "pizza",
+    "gâteau":           "cake",
+    "donut":            "donut",
+    "brocoli":          "broccoli",
+    "carotte":          "carrot",
+    # Divers
+    "livre":            "book",
+    "bouquin":          "book",
+    "horloge":          "clock",
+    "pendule":          "clock",
+    "réveil":           "clock",
+    "montre":           "clock",
+    "vase":             "vase",
+    "plante":           "potted plant",
+    "ciseaux":          "scissors",
+    "sac":              "backpack",
+    "sac à dos":        "backpack",
+    "valise":           "suitcase",
+    "parapluie":        "umbrella",
+    "cravate":          "tie",
+    "vélo":             "bicycle",
+    "moto":             "motorcycle",
+    "voiture":          "car",
+    "camion":           "truck",
+    "avion":            "airplane",
+    "bus":              "bus",
+    "train":            "train",
+    "bateau":           "boat",
+    "toilettes":        "toilet",
+    "wc":               "toilet",
+}
+
+
+# ================================
 # PIÈCES CONNUES
-# Petite liste uniquement pour distinguer NAVIGATE de FIND_OBJECT
 # ================================
 
 PIECES = {
@@ -63,24 +162,32 @@ PIECES = {
 
 # ================================
 # MAPPING YOLO SÉMANTIQUE
-# Trouve la classe YOLO la plus proche sémantiquement
-# Aucun mapping manuel — le modèle fait tout
 # ================================
 
-def _trouver_classe_yolo(entite: str, seuil: float = 0.45) -> str | None:
+def _trouver_classe_yolo(entite: str, seuil: float = 0.55) -> str | None:
     """
-    Trouve la classe YOLO la plus proche de l'entité via similarité cosinus.
-    Le modèle multilingue gère French→English automatiquement.
+    Trouve la classe YOLO correspondant à l'entité.
 
-    "frigo"  → "refrigerator"
-    "télé"   → "tv"
-    "chien"  → "dog"
-    "robot"  → None (score trop faible)
+    Priorité 1 : mapping explicite FR_TO_YOLO  (fiable à 100%)
+    Priorité 2 : mot déjà présent dans YOLO_CLASSES (anglais direct)
+    Priorité 3 : similarité vectorielle avec seuil relevé à 0.55
     """
     if not entite:
         return None
 
-    entite_embedding = model.encode([entite])
+    entite_lower = entite.lower().strip()
+
+    # ── Priorité 1 : mapping explicite ───────────────────────────────
+    if entite_lower in FR_TO_YOLO:
+        return FR_TO_YOLO[entite_lower]
+
+    # ── Priorité 2 : déjà une classe YOLO en anglais ─────────────────
+    yolo_lower = [c.lower() for c in YOLO_CLASSES]
+    if entite_lower in yolo_lower:
+        return YOLO_CLASSES[yolo_lower.index(entite_lower)]
+
+    # ── Priorité 3 : similarité vectorielle ──────────────────────────
+    entite_embedding = model.encode([entite_lower])
     similarities     = cosine_similarity(entite_embedding, _yolo_embeddings)[0]
     best_idx         = int(np.argmax(similarities))
     best_score       = float(similarities[best_idx])
@@ -124,9 +231,8 @@ def _construire_entite(value: str, categories: list) -> dict:
     """
     Construit le dict entité :
     - Si c'est une pièce → type pièce
-    - Sinon → type objet + matching YOLO sémantique
+    - Sinon → type objet + matching YOLO
     """
-    # Vérification pièce
     if "pièce" in categories:
         for piece in PIECES:
             if piece in value or value in piece:
@@ -137,7 +243,6 @@ def _construire_entite(value: str, categories: list) -> dict:
                     "detectable": False
                 }
 
-    # Objet → matching YOLO sémantique
     if "objet" in categories:
         yolo_class = _trouver_classe_yolo(value)
         return {

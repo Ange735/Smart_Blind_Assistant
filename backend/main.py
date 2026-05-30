@@ -13,6 +13,16 @@ from navigation.instructions import generate_instructions
 from safety.sos  import declencher_sos
 
 app = FastAPI()
+
+from fastapi.middleware.cors import CORSMiddleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 detector = ObstacleDetector()
 
 BASE_DIR   = os.path.dirname(os.path.abspath(__file__))
@@ -25,6 +35,10 @@ os.makedirs(HOUSES_DIR, exist_ok=True)
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
 BASE_URL = "http://127.0.0.1:8000"
+
+# 🆕 Sessions actives par device_id
+# Structure : { "device_id": { "active": bool, "intent": str, "target": str } }
+active_sessions: dict[str, dict] = {}
 
 
 # ================================
@@ -423,6 +437,25 @@ async def route_update_house(device_id: str, house: dict = Body(...)):
 
 
 # ================================
+# 🆕 ROUTE 10 : Annuler une action en cours
+# ================================
+
+@app.post("/cancel")
+async def route_cancel(device_id: str = Form(default="default")):
+    session = active_sessions.get(device_id)
+    if session and session.get("active"):
+        active_sessions[device_id]["active"] = False
+        intent = session.get("intent", "")
+        messages = {
+            "FIND_OBJECT": "Recherche annulée.",
+            "NAVIGATE":    "Navigation annulée.",
+        }
+        tts = messages.get(intent, "Action annulée.")
+        return {"status": "ok", "cancelled": True, "tts_message": tts}
+    return {"status": "ok", "cancelled": False, "tts_message": "Aucune action en cours."}
+
+
+# ================================
 # ROUTE PIPELINE
 # ================================
 
@@ -437,7 +470,6 @@ async def route_pipeline(
     path = None
     image_url = None
 
-    # Action par défaut
     action = {
         "loop":           False,
         "loop_interval":  0,
@@ -465,6 +497,44 @@ async def route_pipeline(
     objet      = entity.get("value", "") if entity else ""
     yolo_class = entity.get("yolo_class", objet) if entity else objet
 
+    # 🆕 Vérifie si l'utilisateur veut annuler ("stop", "annuler", "arrêter")
+    CANCEL_KEYWORDS = {"stop", "annuler", "arrête", "arreter", "stopper", "quitter", "terminer"}
+    phrase_lower = phrase.lower().strip()
+    if any(kw in phrase_lower for kw in CANCEL_KEYWORDS):
+        session = active_sessions.get(device_id)
+        if session and session.get("active"):
+            active_sessions[device_id]["active"] = False
+            intent_annule = session.get("intent", "")
+            messages_annule = {
+                "FIND_OBJECT": f"Recherche de {session.get('target', 'l objet')} annulée.",
+                "NAVIGATE":    "Navigation annulée.",
+            }
+            tts_annule = messages_annule.get(intent_annule, "Action annulée.")
+            if path and os.path.exists(path):
+                os.remove(path)
+            return {
+                "status":           "ok",
+                "phrase_originale": phrase,
+                "phrase_nettoyee":  phrase,
+                "intent":           "CANCEL",
+                "source":           "cancel_keywords",
+                "entity":           None,
+                "confident":        True,
+                "device_id":        device_id,
+                "heading":          heading,
+                "cv_result":        {"tts_message": tts_annule},
+                "tts_message":      tts_annule,
+                "action": {
+                    "loop":           False,
+                    "loop_interval":  0,
+                    "stop_obstacle":  False,
+                    "vibration":      "none",
+                    "show_emergency": False,
+                    "mode":           "normal"  # 🆕 repasse en normal → Flutter stop le loop
+                },
+                "image_url": None
+            }
+
     cv_result = {}
 
     # ── Étape 2 : Routage ──────────────────────────────────────────────
@@ -483,6 +553,20 @@ async def route_pipeline(
                 image_url = sauvegarder_image(cv2.imread(path))
 
             else:
+                # 🆕 Vérifie si la session est toujours active avant de traiter
+                session = active_sessions.get(device_id, {})
+                if not session.get("active", True) and session.get("intent") == "FIND_OBJECT":
+                    if path and os.path.exists(path):
+                        os.remove(path)
+                    return {
+                        "status": "ok", "tts_message": "Recherche annulée.",
+                        "action": {**action, "mode": "normal"}, "image_url": None,
+                        "cv_result": {"tts_message": "Recherche annulée."},
+                        "intent": "CANCEL", "device_id": device_id,
+                        "phrase_originale": phrase, "phrase_nettoyee": phrase,
+                        "source": "", "entity": entity, "confident": False, "heading": heading
+                    }
+
                 target    = yolo_class or objet
                 result    = find_object(path, target)
                 image_url = annoter_finder(path, result["details"], result["tts_message"])
@@ -493,11 +577,19 @@ async def route_pipeline(
                     "tts_message": result["tts_message"]
                 }
                 if not result["reached"]:
+                    # 🆕 Enregistre la session active
+                    active_sessions[device_id] = {
+                        "active": True,
+                        "intent": "FIND_OBJECT",
+                        "target": target
+                    }
                     action["loop"]          = True
                     action["loop_interval"] = 5
                     action["stop_obstacle"] = True
                     action["mode"]          = "find_object"
                 else:
+                    # 🆕 Objet atteint → ferme la session automatiquement
+                    active_sessions[device_id] = {"active": False, "intent": "", "target": ""}
                     action["mode"] = "normal"
 
         # ── LOCATE_ROOM ───────────────────────────────────────────────
@@ -547,11 +639,19 @@ async def route_pipeline(
                     }
                     arrived = (len(nav_result["chemin"]) <= 1 or room_from == room_to)
                     if not arrived:
+                        # 🆕 Enregistre la session active
+                        active_sessions[device_id] = {
+                            "active": True,
+                            "intent": "NAVIGATE",
+                            "target": room_to
+                        }
                         action["loop"]          = True
                         action["loop_interval"] = 5
                         action["stop_obstacle"] = True
                         action["mode"]          = "navigate"
                     else:
+                        # 🆕 Arrivée → ferme la session automatiquement
+                        active_sessions[device_id] = {"active": False, "intent": "", "target": ""}
                         action["mode"] = "normal"
 
         # ── SOS ───────────────────────────────────────────────────────
@@ -582,30 +682,24 @@ async def route_pipeline(
             action["mode"] = "normal"
 
     except Exception as e:
-        # Fallback Flutter-friendly : on ne crashe pas, on retourne un message vocal
         cv_result = {
             "tts_message": "Une erreur interne s'est produite. Veuillez reessayer."
         }
         action["mode"] = "normal"
-        # On tente de sauvegarder l'image brute pour que Flutter ait quand même une image
         try:
             raw = cv2.imread(path)
             if raw is not None:
                 image_url = sauvegarder_image(raw)
         except Exception:
             image_url = None
-
-        # Log l'erreur serveur (visible dans les logs uvicorn)
         print(f"[PIPELINE ERROR] intent={intent} | error={str(e)}")
 
-    # ── Nettoyage ──────────────────────────────────────────────────────
     finally:
         if path and os.path.exists(path):
             os.remove(path)
         if image_url:
             background_tasks.add_task(_supprimer_apres, _url_vers_path(image_url), 30)
 
-    # ── Réponse complète ───────────────────────────────────────────────
     return {
         "status":           "ok",
         "phrase_originale": nlp_result.get("phrase_originale", phrase),
