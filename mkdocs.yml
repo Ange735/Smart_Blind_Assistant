@@ -1,7 +1,7 @@
 site_name: Smart Blind Assistant
 site_description: Documentation technique — Système intelligent d'assistance aux personnes malvoyantes
 site_author: BADO Yipène Ange Cenacle · ISSOUG El Mehdi
-site_url: https://smart-blind-assistant.readthedocs.io
+site_url: https://smart-blind-assistant.readthedocs.io/fr/latest/
 repo_name: smart-blind-assistant
 docs_dir: docs
 copyright: Projet S6 · Mai 2026 · BADO Yipène Ange Cenacle · ISSOUG El Mehdi
