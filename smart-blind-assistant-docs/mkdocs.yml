@@ -1,0 +1,139 @@
+site_name: Smart Blind Assistant
+site_description: Documentation technique — Système intelligent d'assistance aux personnes malvoyantes
+site_author: BADO Yipène Ange Cenacle · ISSOUG El Mehdi
+site_url: https://smart-blind-assistant.readthedocs.io
+repo_name: smart-blind-assistant
+docs_dir: docs
+copyright: Projet S6 · Mai 2026 · BADO Yipène Ange Cenacle · ISSOUG El Mehdi
+
+theme:
+  name: material
+  language: fr
+  palette:
+    - scheme: default
+      primary: deep purple
+      accent: cyan
+      toggle:
+        icon: material/brightness-7
+        name: Mode sombre
+    - scheme: slate
+      primary: deep purple
+      accent: cyan
+      toggle:
+        icon: material/brightness-4
+        name: Mode clair
+  font:
+    text: Inter
+    code: JetBrains Mono
+  features:
+    - navigation.tabs
+    - navigation.tabs.sticky
+    - navigation.sections
+    - navigation.expand
+    - navigation.top
+    - navigation.footer
+    - navigation.indexes
+    - search.suggest
+    - search.highlight
+    - search.share
+    - content.code.copy
+    - content.code.annotate
+    - content.tabs.link
+    - toc.follow
+    - toc.integrate
+    - announce.dismiss
+  icon:
+    repo: fontawesome/brands/github
+    admonition:
+      note: octicons/tag-16
+      warning: octicons/alert-16
+      tip: octicons/light-bulb-16
+      abstract: octicons/checklist-16
+      info: octicons/info-16
+      success: octicons/check-16
+      question: octicons/question-16
+      failure: octicons/x-circle-16
+      danger: octicons/zap-16
+      bug: octicons/bug-16
+      example: octicons/beaker-16
+      quote: octicons/quote-16
+  icon:
+    logo: material/eye-circle
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/votre-org/smart-blind-assistant
+  generator: false
+  version:
+    provider: mike
+
+extra_css:
+  - assets/extra.css
+
+plugins:
+  - search:
+      lang: fr
+  - minify:
+      minify_html: true
+
+markdown_extensions:
+  - admonition
+  - pymdownx.details
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+  - tables
+  - attr_list
+  - md_in_html
+  - def_list
+  - footnotes
+  - toc:
+      permalink: true
+      title: Sur cette page
+
+nav:
+  - Accueil: index.md
+  - Démarrage rapide:
+    - getting-started/prerequisites.md
+    - getting-started/installation.md
+    - getting-started/configuration.md
+    - getting-started/first-run.md
+  - Architecture:
+    - architecture/overview.md
+    - architecture/backend.md
+    - architecture/data-flow.md
+  - Modules:
+    - modules/computer-vision.md
+    - modules/nlp.md
+    - modules/navigation.md
+    - modules/safety.md
+  - API REST:
+    - api/endpoints.md
+    - api/pipeline.md
+    - api/responses.md
+  - Application Mobile:
+    - mobile/architecture.md
+    - mobile/modes.md
+    - mobile/flutter-deps.md
+  - Interface Aidant:
+    - caregiver/overview.md
+  - Performance:
+    - performance/optimizations.md
+    - performance/benchmarks.md
+  - Limitations & Roadmap:
+    - roadmap/limitations.md
+    - roadmap/future.md
